@@ -1,4 +1,4 @@
-require.config({
+﻿require.config({
     paths: {
         crossFilter: '/sitecore/shell/client/Applications/ECM/EmailCampaign.Client/Assets/Lib/crossfilter.min'
     },
@@ -13,15 +13,13 @@ define([
     'jquery',
     'crossFilter',
     '/-/speak/v1/ecm/DimensionModel.js',
-    '/-/speak/v1/ecm/ExperienceAnaliticsKeysService.js',
      'jqueryui'
-], function (
+], function(
     sitecore,
     backbone,
     $,
     crossFilter,
-    DimensionModel,
-    ExperienceAnaliticsKeysService
+    DimensionModel
 ) {
     var eventTypes = ['open', 'click', 'unsubscribe', 'emailSent', 'emailBounced', 'spamReportedOnEmail'];
 
@@ -34,13 +32,11 @@ define([
             reportingItems: null,
             name: 'ReportData',
             serverDimensionId: null,
-            messageId: '',
-            managerRootId: '',
             dateFrom: null,
             dateTo: null,
             contentFields: ['key', 'visits', 'date', 'bounces', 'value', 'count'],
             additionalParams: {},
-            keysFromAncestor: null,
+            keysFromAncestor : null,
             urlRoot: '/sitecore/api/ao/aggregates/all/',
             url: null,
             isBusy: false
@@ -60,10 +56,9 @@ define([
             this.dimensions = new Dimensions();
             this.filter = crossFilter([]);
             this.attachEventHandlers();
-            this.updateKeysFromAncestor();
         },
 
-        getEventTypes: function () {
+        getEventTypes: function() {
             return eventTypes;
         },
 
@@ -72,13 +67,10 @@ define([
             this._super(ajaxOptions);
         },
 
-        attachEventHandlers: function () {
-            var debouncedUpdateUrl = _.debounce(this.updateUrl, 50),
-                debouncedUpdateKeysFromAncestor = _.debounce(this.updateKeysFromAncestor, 50);
-
+        attachEventHandlers: function() {
+            var debouncedUpdateUrl = _.debounce(this.updateUrl, 50);
             this.on({
                 'change:reportingItems': this.updateFilter,
-                'change:messageId': debouncedUpdateKeysFromAncestor,                'change:managerRootId': debouncedUpdateKeysFromAncestor,
                 'change:requestParams': debouncedUpdateUrl,
                 'change:urlRoot': debouncedUpdateUrl,
                 'change:serverDimensionId': debouncedUpdateUrl,
@@ -88,37 +80,27 @@ define([
                 'change:keysFromAncestor': debouncedUpdateUrl,
                 'change:url': this.onChangeUrl
             }, this);
-            this.dimensions.on('filtered', function () {
+            this.dimensions.on('filtered', function() {
                 this.trigger('filtered');
             }, this);
         },
 
-        updateKeysFromAncestor: function () {
-            ExperienceAnaliticsKeysService.getKey({
-                managerRootId: this.get('managerRootId'),                messageId: this.get('messageId')
-            }).done(_.bind(function (key) {
-                this.set('keysFromAncestor', key);
-            }, this));
-        },
-
         updateUrl: function () {
-            if (this.get('keysFromAncestor')) {
-                var url = this.get('urlRoot') + this.get('serverDimensionId') + '/all',
-                    params = _.extend(
-                        {},
-                        this.requestParamsDefaults,
-                        this.get('requestParams'),
-                        {
-                            dateFrom: $.datepicker.formatDate('dd-mm-yy', this.get('dateFrom')),
-                            dateTo: $.datepicker.formatDate('dd-mm-yy', this.get('dateTo')),
-                            fields: this.get('contentFields').join(','),
-                            keysFromAncestor: this.get('keysFromAncestor')
-                        }
-                    );
+            var url = this.get('urlRoot') + this.get('serverDimensionId') + '/all',
+                params = _.extend(
+                    {},
+                    this.requestParamsDefaults,
+                    this.get('requestParams'),
+                    {
+                        dateFrom: $.datepicker.formatDate('dd-mm-yy', this.get('dateFrom')),
+                        dateTo: $.datepicker.formatDate('dd-mm-yy', this.get('dateTo')),
+                        fields: this.get('contentFields').join(','),
+                        keysFromAncestor: this.get('keysFromAncestor')
+                    }
+                );
 
-                url += '?' + $.param(params);
-                this.set('url', url);
-            }
+            url += '?' + $.param(params);
+            this.set('url', url);
         },
 
         updateFilter: function () {
@@ -142,14 +124,12 @@ define([
                     }, this)
                 };
 
-            if (token && this.get('keysFromAncestor')) {
-                ajaxOptions.headers[token.headerKey] = token.value;
+            ajaxOptions.headers[token.headerKey] = token.value;
 
-                this.fetch(ajaxOptions);
-            }
+            this.fetch(ajaxOptions);
         },
 
-        parseKeys: function (keys) {
+        parseKeys: function(keys) {
             _.each(keys, _.bind(function (key, index) {
                 key = $.type(key) === 'string' ? JSON.parse(key) : key;
                 keys[index] = _.object(this.get('keyFieldNames'), key);
@@ -157,15 +137,15 @@ define([
             return keys;
         },
 
-        prepareContentItems: function (items, keys) {
-            _.each(items, _.bind(function (contentItem) {
+        prepareContentItems: function(items, keys) {
+            _.each(items, _.bind(function(contentItem) {
                 _.extend(contentItem, keys[contentItem.key] || {});
                 this.prepareFields(contentItem);
             }, this));
             return items;
         },
 
-        parse: function (data) {
+        parse: function(data) {
             data = data.data;
             var items = [];
 
@@ -174,45 +154,45 @@ define([
                     parsedKeys = this.parseKeys(keys.translations);
                 items = this.prepareContentItems(data.content, parsedKeys);
             }
-
+            
             this.set('isBusy', false);
 
             return { reportingItems: items };
         },
 
-        prepareFields: function (item) {
+        prepareFields: function(item) {
             item.date = new Date(item.date);
-            var month = item.date.getMonth(),
-                year = item.date.getFullYear(),
-                day = item.date.getDate();
+            var month = item.date.getUTCMonth() + 1,
+                year = item.date.getUTCFullYear(),
+                day = item.date.getUTCDay();
             item.year = new Date(year).getTime();
             item.month = new Date(year, month).getTime();
             item.day = new Date(year, month, day).getTime();
         },
 
-        getDimensionOptions: function (dimension) {
+        getDimensionOptions: function(dimension) {
             var options = {};
             switch ($.type(dimension)) {
-                case 'string':
-                    options.name = options.key = dimension;
-                    break;
-                case 'object':
-                    options.name = dimension.name || dimension.key;
-                    options.key = dimension.key;
-                    options.dimensionFunction = dimension.func;
-                    break;
+            case 'string':
+                options.name = options.key = dimension;
+                break;
+            case 'object':
+                options.name = dimension.name || dimension.key;
+                options.key = dimension.key;
+                options.dimensionFunction = dimension.func;
+                break;
             }
             return options;
         },
 
-        dimension: function (dimension) {
+        dimension: function(dimension) {
             var creationOptions = this.getDimensionOptions(dimension);
             if (creationOptions.name && creationOptions.key) {
                 var exsistDimension = this.dimensions.findWhere({ name: creationOptions.name });
                 if (exsistDimension) {
                     return exsistDimension;
                 } else {
-                    var dimensionObject = this.filter.dimension(creationOptions.dimensionFunction || function (d) {
+                    var dimensionObject = this.filter.dimension(creationOptions.dimensionFunction || function(d) {
                         return d[creationOptions.key];
                     });
                     creationOptions = _.extend({ dimensionObject: dimensionObject }, creationOptions);
@@ -224,17 +204,17 @@ define([
             return null;
         },
 
-        resetDimensions: function () {
+        resetDimensions: function() {
             _.each(this.dimensions, this.resetDimension);
         },
 
-        resetDimension: function (dimension) {
+        resetDimension: function(dimension) {
             dimension.resetFilters();
             dimension.resetGroups();
         },
 
-        total: function (key) {
-            return this.filter.groupAll().reduceSum($.type(key) === 'function' ? key : function (fact) {
+        total: function(key) {
+            return this.filter.groupAll().reduceSum($.type(key) === 'function' ? key : function(fact) {
                 return fact[key];
             }).value();
         },
