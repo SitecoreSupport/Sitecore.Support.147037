@@ -160,11 +160,11 @@ define([
             return { reportingItems: items };
         },
 
-        prepareFields: function(item) {
+        prepareFields: function (item) {
             item.date = new Date(item.date);
-            var month = item.date.getUTCMonth() + 1,
-                year = item.date.getUTCFullYear(),
-                day = item.date.getUTCDay();
+            var month = item.date.getMonth(),
+                year = item.date.getFullYear(),
+                day = item.date.getDate();
             item.year = new Date(year).getTime();
             item.month = new Date(year, month).getTime();
             item.day = new Date(year, month, day).getTime();
